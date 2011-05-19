@@ -2,6 +2,20 @@ require 'json'
 
 class DirtyDocument
   attr_accessor :key
+  @@parent_classes = []
+  @parents = {}
+  
+  def method_missing(m, *args, &block)  
+    #detect if requesting a related obj
+    clean_name = m.to_s.gsub(/\W/,"").downcase.to_sym
+    raise "Unknown method for #{m}" unless @@parent_classes.include?(clean_name)
+    if m.to_s[m.length - 1, m.length].eql?("=")
+      @parents = {} if @parrents == nil
+      @parents[clean_name] = args[0]
+    else
+      @parents[clean_name]
+    end
+  end
   
   def set_key
     if @key == nil
@@ -38,6 +52,10 @@ class DirtyDocument
     set_key if @key == nil
     
     DirtyManager.instance.write(self)
+  end
+  
+  def DirtyDocument.belongs_to(class_kind)
+    @@parent_classes << class_kind.downcase unless @@parent_classes.include?(class_kind)
   end
   
   def DirtyDocument.restore(file)
