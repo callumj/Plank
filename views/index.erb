@@ -1,0 +1,6 @@
+<% @threads.each do |thread| %>
+	<div class="post">
+		<h2><a href="/post/<%= thread.key %>.html"><%= thread.title %></a></h2>
+		<p class="details"><%= thread.created_at %></p>
+	</div>
+<% end %>
