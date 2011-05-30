@@ -9,6 +9,8 @@ class DirtyManager
     @settings[:storage_path] = args[:storage_path] if args[:storage_path] != nil
     
     @@instance = self if @@instance == nil
+    
+    @active_thread = nil
   end
   
   def DirtyManager.instance
@@ -25,10 +27,11 @@ class DirtyManager
     #create folder
     class_name_san = DirtyManager.class_to_str(class_obj)
     folder_path = "#{@settings[:storage_path]}/#{class_name_san}"
+    puts folder_path
     Dir.mkdir(folder_path) unless File.exists?(folder_path)
     
     #dump
-    serialized_value = class_obj.to_json()
+    serialized_value = class_obj.to_file()
     
     #save internally
     index(class_obj)
@@ -39,14 +42,25 @@ class DirtyManager
     end
     
     #write
-    File.open("#{folder_path}/#{class_obj.key}.json", 'w') {|f| f.write(serialized_value) }
+    File.open("#{folder_path}/#{class_obj.key}.data", 'w') {|f| f.write(serialized_value) }
   end
   
   def load_dir()
-    Dir["#{@settings[:storage_path]}/*/*.json"].each do |file|
+    Dir["#{@settings[:storage_path]}/*/*.data"].each do |file|
       found_obj = DirtyDocument.restore(file)
       index(found_obj)
     end
+  end
+  
+  def start_dir_loader
+    @active_thread.stop if @active_thread != nil
+    
+    @active_thread = Thread.new(self) { |thisObj|        
+        while (true)
+          self.load_dir()
+          sleep 5
+        end
+      }
   end
   
   def find_class(class_name, key)

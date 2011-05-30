@@ -9,11 +9,13 @@
 </head>
 
 <body>
-	<div id="header">
-		<h1>the forum - <%= $this_user.name %></h1>
-	</div>
-	<div id="content">
-		<%= yield %>
-	</div>
+  <div id="surrounding">
+  	<div id="header">
+  		<h1>the forum - <%= $options[:this_user].name %></h1>
+  	</div>
+  	<div id="content">
+  		<%= yield %>
+  	</div>
+  </div>
 </body>
 </html>

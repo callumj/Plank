@@ -82,14 +82,15 @@ class DirtyDocument
         #check if we need to load it or if we already have it
         return @children["resolved"][clean_name] if (@children["resolved"].key?(clean_name) && @children["resolved"][clean_name] != nil)
         
+        stor_array = []
         
         return [] unless @children["refs"].key?(clean_name)
         @children["refs"][clean_name].each do |key|
           r_obj = DirtyManager.instance.find_class(clean_name, key)
-          @children["refs"][clean_name] << r_obj if (r_obj != nil && !(@children["refs"][clean_name].include?(r_obj)))
+          stor_array << r_obj if (r_obj != nil && !(@children["refs"][clean_name].include?(r_obj)))
         end
         
-        @children["refs"][clean_name]
+        stor_array
       end
     end
   end
@@ -109,7 +110,7 @@ class DirtyDocument
     end
   end
   
-  def to_json
+  def to_file
     variables = {}
     self.instance_variables.each do |variable|
       obj_value = self.instance_variable_get(variable)
@@ -125,7 +126,7 @@ class DirtyDocument
       
       variables[variable.to_s] = obj_value
     end
-    variables.to_json()
+    MessagePack.pack(variables)
   end
   
   def save
@@ -164,7 +165,7 @@ class DirtyDocument
     class_instance = class_target.new
     
     #build class
-    file_values = JSON.parse(file_contents)
+    file_values = MessagePack.unpack(file_contents)
     file_values.each_key do |key|
       key_sym = key.to_sym
       class_instance.instance_variable_set(key_sym,file_values[key])
@@ -181,8 +182,21 @@ class DirtyDocument
     return DirtyManager.instance.class_collection[this_safe_name][:key].values[0]
   end
   
+  def DirtyDocument.findOne(args = {})
+    results = self.find(args)
+    return nil if results == nil
+    if (results.kind_of?(Array))
+      if (results.size == 0)
+        return nil
+      else
+        return results[0]
+      end
+    end
+    return results
+  end
+  
   def DirtyDocument.find(args = {})
-    this_safe_name = DirtyManager.class_to_str(self.new)
+    this_safe_name = DirtyManager.class_to_str(self.name)
     return [] unless DirtyManager.instance.class_collection.key?(this_safe_name)
     return DirtyManager.instance.class_collection[this_safe_name][:key].values if args.empty?
     
