@@ -4,12 +4,14 @@ end
 
 before do
   
+  @page_title = "#{$options[:db_name].capitalize} forum - Plank"
+  
   if ($options[:this_user] == nil)
     $options[:this_user] = User.new
     $options[:this_user].name = "No user"
     
     unless (request.path.start_with?("/user_create"))
-      redirect("/user_create") if ($options[:this_user] == nil && !(request.path.start_with?("/style.css") || request.path.start_with?("/public") || request.path.start_with?("/__sinatra__")))
+      redirect("/user_create") if (!(request.path.start_with?("/style.css") || request.path.start_with?("/public") || request.path.start_with?("/__sinatra__")))
     end
   end
 end
@@ -62,16 +64,20 @@ post '/thread_create' do
   thread_post.user = $options[:this_user]
   thread_post.contents = post_message
   thread_post.created_at = Time.now
-  new_thread.post = thread_post
   thread_post.save
   
   redirect("/thread/#{new_thread.key.to_s}.html")
 end
 
 get '/thread/:key.:format' do
+  
   @thread = ForumThread.find(:key => params[:key])
   
-  @posts = @thread.post.sort {|a,b| a.created_at_i <=> b.created_at_i}
+  @page_title = "#{@thread.title} on #{@page_title}"
+  
+  @posts = @thread.post.sort {|a,b| b.created_at_i <=> a.created_at_i}
+  
+  @most_recent_post = @posts[0]
   
   erb :thread
 end

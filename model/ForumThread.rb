@@ -13,6 +13,7 @@ class ForumThread < DirtyDocument
   end
   
   def created_at
+    self.created_at_i = Time.now.to_i if self.created_at_i == nil
     Time.at(self.created_at_i)
   end
 end

@@ -36,11 +36,6 @@ class DirtyManager
     #save internally
     index(class_obj)
     
-    #save relationships
-    class_obj.parents_resolved.each_key do |key|
-      class_obj.parents_resolved[key].save
-    end
-    
     #write
     File.open("#{folder_path}/#{class_obj.key}.data", 'w') {|f| f.write(serialized_value) }
   end

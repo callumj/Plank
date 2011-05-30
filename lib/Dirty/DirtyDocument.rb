@@ -2,11 +2,10 @@ require 'json'
 
 class DirtyDocument
   attr_accessor :key
+  attr_accessor :parents
   @@parent_classes = []
   @@children_classes = []
   @parents = {}
-  @children = {}
-  @init_done = false
   
   def initialize
     super
@@ -15,84 +14,53 @@ class DirtyDocument
   
   def init_variables
     @parents = {} if @parents == nil
-    @parents["refs"] = {} unless (@parents.key?("refs") && @parents["refs"] != nil)
-    @parents["resolved"] = {} unless (@parents.key?("resolved") && @parents["resolved"] != nil)
-    
-    @children = {} if @children == nil
-    @children["refs"] = {} unless (@children.key?("refs") && @children["refs"] != nil)
-    @children["resolved"] = {} unless (@children.key?("resolved") && @children["resolved"] != nil)
-    
-    
-    @init_done = true
-  end
-  
-  def parents_resolved
-    return {} unless @parents.key?("resolved")
-    @parents["resolved"]
-  end
-  
-  def parents_refs
-    return {} unless @parents.key?("refs")
-    @parents["refs"]
   end
   
   def method_missing(m, *args, &block)
-    init_variables unless @init_done == true
+    init_variables if @parents == nil
+    
     #detect if requesting a related obj
     clean_name = m.to_s.gsub(/\W/,"").downcase
-    super(m, *args, &block) unless (@@parent_classes.include?(clean_name) || @@children_classes.include?(clean_name))
+    this_safe_name = DirtyManager.class_to_str(self.class.name)
     
-    prevent_super = m.to_s[m.length - 1, m.length].eql?(".")
+    op_mode = nil
+    rel_mode = nil
     
-    m = m.to_s[0, m.length - 1] if prevent_super
-    
-    if (m.to_s[m.length - 1, m.length].eql?("=") || m.to_s[m.length - 2, m.length].eql?("<<"))
-      args[0].set_key if args[0].kind_of?(DirtyDocument)
-      
-      this_safe_name = DirtyManager.class_to_str(self)
-      
-      if @@parent_classes.include?(clean_name)
-        @parents["resolved"][clean_name] = args[0]
-        @parents["refs"][clean_name] = args[0].key
-        
-        args[0].send("#{this_safe_name}<<.",self) unless prevent_super
-      elsif @@children_classes.include?(clean_name)
-        @children["resolved"][clean_name] = [] unless @children["resolved"].key?(clean_name)
-        @children["refs"][clean_name] = [] unless @children["refs"].key?(clean_name)
-        if (m.to_s[m.length - 2, m.length].eql?("<<"))
-          @children["resolved"][clean_name] << args[0]
-          @children["refs"][clean_name] << args[0].key
-        elsif (m.to_s[m.length - 1, m.length].eql?("="))
-          @children["resolved"][clean_name] = [args[0]]
-          @children["refs"][clean_name] = [args[0].key]
-        end
-        
-        
-        args[0].send("#{this_safe_name}=.",self) unless prevent_super
-      end
+    if (m.to_s.include?("="))
+      op_mode = :assignment
     else
-      if @@parent_classes.include?(clean_name)
-        #check if we need to load it or if we already have it
-        return @parents["resolved"][clean_name] if (@parents["resolved"].key?(clean_name) && @parents["resolved"][clean_name] != nil)
-        #need to ask for it from DirtyManager and load it in
-        return nil unless @parents["refs"].key?(clean_name)
-        return nil unless DirtyManager.instance.key_exists?(clean_name, @parents["refs"][clean_name])
-        @parents["resolved"][clean_name] = DirtyManager.instance.find_class(clean_name, @parents["refs"][clean_name])
-      elsif @@children_classes.include?(clean_name)
-        #check if we need to load it or if we already have it
-        return @children["resolved"][clean_name] if (@children["resolved"].key?(clean_name) && @children["resolved"][clean_name] != nil)
-        
-        stor_array = []
-        
-        return [] unless @children["refs"].key?(clean_name)
-        @children["refs"][clean_name].each do |key|
-          r_obj = DirtyManager.instance.find_class(clean_name, key)
-          stor_array << r_obj if (r_obj != nil && !(@children["refs"][clean_name].include?(r_obj)))
-        end
-        
-        stor_array
-      end
+      op_mode = :fetch
     end
+    
+    if (@@parent_classes.include?(clean_name))
+      rel_mode = :parent
+    elsif (@@children_classes.include?(clean_name))
+      rel_mode = :child
+    else
+      puts "help"
+      return super(m, *args, &block)
+    end
+    
+    
+    if op_mode == :fetch
+      if rel_mode == :parent
+        return nil if @parents[clean_name] == nil
+        return DirtyManager.instance.find_class(clean_name, @parents[clean_name])
+      elsif rel_mode == :child
+        results = []
+        DirtyManager.instance.class_collection[clean_name][:key].values.each do |obj|
+          results << obj if obj.parents[this_safe_name].eql?(self.key)
+        end
+        return results
+      end
+    elsif op_mode == :assignment
+      if rel_mode == :parent
+        @parents[clean_name] = args[0].key
+        return true
+      end    
+    end
+    
+    return nil
   end
   
   def set_key
@@ -113,17 +81,7 @@ class DirtyDocument
   def to_file
     variables = {}
     self.instance_variables.each do |variable|
-      obj_value = self.instance_variable_get(variable)
-            
-      if (obj_value.eql?(@parents))
-        #strip the resolved
-        obj_value = @parents.clone
-        obj_value["resolved"] = nil
-      elsif (obj_value.eql?(@children))
-        obj_value = @children.clone
-        obj_value["resolved"] = nil
-      end
-      
+      obj_value = self.instance_variable_get(variable)      
       variables[variable.to_s] = obj_value
     end
     MessagePack.pack(variables)
@@ -177,7 +135,7 @@ class DirtyDocument
   end
   
   def DirtyDocument.first
-    this_safe_name = DirtyManager.class_to_str(self.new)
+    this_safe_name = DirtyManager.class_to_str(self.name)
     return nil unless (DirtyManager.instance.class_collection.key?(this_safe_name) && DirtyManager.instance.class_collection[this_safe_name].key?(:key))
     return DirtyManager.instance.class_collection[this_safe_name][:key].values[0]
   end
