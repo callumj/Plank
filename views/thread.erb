@@ -3,10 +3,11 @@
 </div>
 
 <h2><%= @thread.title %></h2>
-
-<% @posts.each do |post| %>  
-	<div class="post"<%= "style=\"background-color: #e1f4f4\"" if post == @most_recent_post %>>
-	  <p class="contents"><%= post.contents %></p>
-	  <p class="details"><%= post.user.name %> <%= post.created_at.strftime("%I:%M%p %d/%m/%Y") %></p>
-	</div>
-<% end %>
+<div id="posts">
+  <% @posts.each do |post| %>  
+  	<div class="post"<%= " style=\"background-color: #edf4f4\"" if post == @most_recent_post %>>
+  	  <p class="contents"><%= post.contents %></p>
+  	  <p class="details"><%= post.user.name %> <%= post.created_at.strftime("%I:%M%p %d/%m/%Y") %></p>
+  	</div>
+  <% end %>
+</div>

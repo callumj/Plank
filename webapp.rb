@@ -5,6 +5,8 @@ end
 before do
   
   @page_title = "#{$options[:db_name].capitalize} forum - Plank"
+  @script_data = ""
+  @extra_js = []
   
   if ($options[:this_user] == nil)
     $options[:this_user] = User.new
@@ -31,10 +33,12 @@ post '/user_create' do
   #build user and set values
   display_name = params[:display_name]
   user_name = params[:user_name]
+  email = params[:email]
   
   new_user = User.new
   new_user.name = display_name
   new_user.username = user_name
+  new_user.email = email
   new_user.save
   
   $options[:this_user] = new_user
@@ -43,6 +47,8 @@ post '/user_create' do
   user_settings = {"user_key" => new_user.key}
   user_settings_str = MessagePack.pack(user_settings)
   File.open($options[:user_settings_file], 'w') {|f| f.write(user_settings_str) }
+  
+  redirect("/")
 end
 
 get '/thread_create' do
@@ -70,16 +76,23 @@ post '/thread_create' do
 end
 
 get '/thread/:key.:format' do
-  
   @thread = ForumThread.find(:key => params[:key])
   
   @page_title = "#{@thread.title} on #{@page_title}"
   
   @posts = @thread.post.sort {|a,b| b.created_at_i <=> a.created_at_i}
+  @posts = @posts.keep_if {|post| post.created_at_i > params[:since].to_i} if params[:since] != nil
   
-  @most_recent_post = @posts[0]
-  
-  erb :thread
+  if (params[:format].eql?("json"))
+    {"data" => {"thread" => @thread, "posts" => @posts}}.to_json
+  else
+    @most_recent_post = @posts[0]
+
+    @script_data = "var recent_data = \"#{@most_recent_post.created_at_i}\";\nvar thread_key = \"#{@thread.key}\";"
+    @extra_js << "/thread.js"
+    
+    erb :thread
+  end
 end
 
 get '/post_create/:key' do
@@ -95,6 +108,8 @@ post '/post_create/:key' do
   post.contents = params[:message]
   post.created_at = Time.now
   post.save
+  
+  post.email_users()
   
   redirect("/thread/#{thread.key.to_s}.html")
 end

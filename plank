@@ -1,0 +1,9 @@
+#!/usr/bin/env ruby
+
+require 'pathname'
+require 'sinatra'
+set :views, File.dirname(Pathname.new(__FILE__).realpath) + '/views'
+set :public, File.dirname(Pathname.new(__FILE__).realpath) + '/public'
+disable :logging, :dump_errors
+set :logging, false
+require File.dirname(Pathname.new(__FILE__).realpath) + "/bootstrap.rb"

@@ -114,8 +114,8 @@ form input {
  * Posts
  */
 .post {
-  border-top: 1px solid #efefef;
-  border-bottom: 1px solid #efefef;
+  border-top: 1px solid white;
+  border-bottom: 1px solid white;
   padding-top: 7px;
   padding-left: 8px;
   padding-right: 8px;

@@ -1,10 +1,13 @@
 #bundler
 require "bundler/setup"
 require 'optparse'
+require 'json'
+require 'digest/sha1'
 
 #the gems
 require 'sinatra'
 require 'msgpack'
+require 'mail'
 
 $options = {}
 
@@ -16,9 +19,9 @@ optparse = OptionParser.new do|opts|
     $options[:dbpath] = folder
   end
   
-  $options[:dropbox] = nil
-  opts.on( '-b', '--dropbox FOLDER', 'Use specific Dropbox location' ) do |folder|
-    $options[:dropbox] = folder
+  $options[:root] = nil
+  opts.on( '-b', '--settings FOLDER', 'Use specific root folder for storing user specific settings' ) do |folder|
+    $options[:root] = folder
   end
 end
 
@@ -28,25 +31,30 @@ clean_path = clean_path[0, clean_path.length - 1] if clean_path[clean_path.lengt
 $options[:db_name] = clean_path[clean_path.rindex("/") + 1,clean_path.length]
 
 #attempt to obtain Dropbox root folder from database location
-if ($options[:dropbox] == nil)
+if ($options[:root] == nil)
   path_test = $options[:dbpath]
   while(!(path_test.eql?("/")))
     break if (path_test.match(/\/Dropbox\/*$/) != nil)
     
     path_test = File.expand_path("#{path_test}/..")
   end
-  $options[:dropbox] = path_test
+  $options[:root] = path_test
 end
 
+$options[:root] = Dir.home if $options[:root].eql?("/")
+
 puts "Using #{$options[:dbpath]} for database(#{$options[:db_name]}) location"
-puts "Using #{$options[:dropbox]} for settings location"
+puts "Using #{$options[:root]} for settings location"
 
 real_db_loc = "#{$options[:dbpath]}/plank_db"
 
 Dir.mkdir(real_db_loc) unless File.exists?(real_db_loc)
+Dir.mkdir("#{$options[:root]}/.plank") unless File.exists?("#{$options[:root]}/.plank")
+
+settings_file_name = Digest::SHA1.hexdigest($options[:dbpath].gsub("#{$options[:root]}/", ""))
 
 $options[:user_settings] = {}
-$options[:user_settings_file] = "#{$options[:dropbox]}/#{$options[:db_name]}.conf"
+$options[:user_settings_file] = "#{$options[:root]}/.plank/#{settings_file_name}.conf"
 #Read in user specific settings
 if (File.exists?($options[:user_settings_file]))
   file_contents = ""

@@ -3,6 +3,7 @@ require 'json'
 class DirtyDocument
   attr_accessor :key
   attr_accessor :parents
+  attr_accessor :restore_time
   @@parent_classes = []
   @@children_classes = []
   @parents = {}
@@ -81,8 +82,10 @@ class DirtyDocument
   def to_file
     variables = {}
     self.instance_variables.each do |variable|
-      obj_value = self.instance_variable_get(variable)      
-      variables[variable.to_s] = obj_value
+      unless (variable.eql?("restore_time"))
+        obj_value = self.instance_variable_get(variable)      
+        variables[variable.to_s] = obj_value
+      end
     end
     MessagePack.pack(variables)
   end
@@ -130,7 +133,9 @@ class DirtyDocument
     end
     
     class_instance.init_variables
-        
+    
+    class_instance.restore_time = Time.now
+    
     class_instance
   end
   

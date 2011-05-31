@@ -6,6 +6,16 @@
 <head>
 	<title><%= @page_title %></title>
 	<link rel="stylesheet" href="/style.css" type="text/css" media="screen" title="no title" charset="utf-8">
+	<script src="/jquery.js" type="text/javascript" charset="utf-8"></script>
+	<% @extra_js.each do |js| %>
+	<script src="<%= js %>" type="text/javascript" charset="utf-8"></script>
+	<% end %>
+	<% if @script_data.length > 0 %>
+	<script type="text/javascript">
+	  <%= @script_data %>
+	</script>
+	
+	<% end %>
 </head>
 
 <body>
