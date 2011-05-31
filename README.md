@@ -21,6 +21,10 @@ And then from the terminal you can **cd** to your shared Dropbox folder, start p
 
 and Plank will create the DB if needed as well as locally create a user settings file. Once you open up the forum at the usual web address of http://localhost:4567 you will be asked to create a quick profile and then you are free to go.
 
+![Startup](http://callumj.com/image_store//Terminal_%E2%80%94_env_%E2%80%94_133%C3%9723-20110531-223853.jpg "Command line")
+
+![Main interface](http://callumj.com/image_store//Dbtest_forum_-_Plank-20110531-223729.jpg "Main interface")
+
 ## What it currently provides ##
 
 * A simple thread & post interface
